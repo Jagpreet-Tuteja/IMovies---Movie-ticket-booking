@@ -1,0 +1,24 @@
+{
+  "name": "imovies-server",
+  "version": "2.0.0",
+  "description": "IMovies REST API - Express + MongoDB (MVC)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "cors": "2.8.5",
+    "dotenv": "16.4.7",
+    "express": "4.21.2",
+    "jsonwebtoken": "9.0.2",
+    "mongoose": "8.9.5",
+    "nodemailer": "6.9.16",
+    "socket.io": "4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "3.1.9"
+  }
+}
