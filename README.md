@@ -28,11 +28,25 @@ IMovies is an online platform for booking cinema tickets. Users can browse movie
 **Backend services (controllers):** Auth, Admin, Movie, Theatre, Show (including seat management), Booking (including payments), Review and Favorite (watchlist).
 
 **Security:**
-- Passwords are hashed with bcrypt.
-- JWT authentication, with role-based access for users and admins.
-- Input is validated on the server.
-- Passwords are never returned by the API.
-- CORS only allows the client's origin.
+- **Accounts:**
+  - Passwords are hashed with bcrypt and never returned by the API.
+  - Login uses JWTs, with role-based access for customers and admins.
+  - On a deployment, the admin password must come from the `ADMIN_PASSWORD` environment variable; the public demo password is refused.
+- **Abuse protection:**
+  - Login and sign-up are limited to 20 attempts per 15 minutes per IP.
+  - All API requests are limited to 300 per minute per IP.
+  - Request bodies are capped at 20 KB.
+- **Injection:**
+  - Request data is checked for type and stripped of `$` and `.` keys, so it can never become a MongoDB operator (NoSQL injection).
+  - Search text is regex-escaped.
+- **Headers:**
+  - API responses get Helmet's security headers.
+  - The website gets a Content Security Policy and anti-clickjacking headers (see `vercel.json`).
+  - CORS only allows the client's origin.
+- **Redirects:** after login the app only redirects to its own pages.
+- **Secrets and dependencies:**
+  - Secrets live only in environment variables or the database, never in the repo.
+  - `npm audit` reports no known vulnerabilities in the server packages. The remaining React Router advisories cover server-side rendering and untrusted redirect paths, which this app doesn't use.
 
 ## 2. ER diagram
 
@@ -356,9 +370,9 @@ When the server starts with an empty database, it loads the sample movies, theat
 Steps:
 1. **Import the project:** on Vercel, go to **Add New → Project** and import this GitHub repo.
    - Set **Application Preset** to **Other**.
-   - Add these environment variables:
-     - `JWT_SECRET`: a long random string
-     - `ADMIN_PASSWORD` (optional): the admin password for the live site. Without it, the password is the public demo `admin123`.
+   - Environment variables:
+     - `ADMIN_PASSWORD`: the admin password for the live site. On a deployment, the public demo password `admin123` never works. Without this variable, the admin gets a random password nobody knows. Changing the variable and redeploying updates the password.
+     - `JWT_SECRET` (optional): if you leave it out, the server generates a strong secret once and stores it in the database.
    - Click **Deploy**.
 2. **Add a database:** in the project, open **Storage → Create Database → MongoDB Atlas** and connect it to the project.
    - Vercel creates a free cluster and sets `MONGODB_URI` for you. Nobody ever sees or types the password.
