@@ -5,8 +5,10 @@ import { socket } from '../api/socket';
 import Spinner from '../components/Spinner';
 
 const MAX_SEATS = 10;
-// Seat holds expire on the server without a socket event, so also refresh now and then
-const FALLBACK_REFRESH_MS = 30000;
+// Hosts without WebSocket support (like Vercel) build with VITE_REALTIME=polling and refresh often instead.
+// With Socket.io we still refresh now and then, because seat holds expire without a socket event.
+const REALTIME = import.meta.env.VITE_REALTIME !== 'polling';
+const REFRESH_MS = REALTIME ? 30000 : 4000;
 
 export default function SeatSelection() {
   const { id } = useParams();
@@ -38,14 +40,16 @@ export default function SeatSelection() {
     // If the user came back from checkout, start with the seats they're still holding
     refresh().then((data) => data.mine.length && setSelected(data.mine));
 
+    const onSeatsChanged = () => refresh().catch(() => {});
+    const timer = setInterval(onSeatsChanged, REFRESH_MS);
+    if (!REALTIME) return () => clearInterval(timer);
+
     // Live updates: the server tells everyone viewing this show when any seat changes
     const join = () => socket.emit('show:join', id);
-    const onSeatsChanged = () => refresh().catch(() => {});
     socket.connect();
     join();
     socket.on('connect', join);
     socket.on('seats:changed', onSeatsChanged);
-    const timer = setInterval(onSeatsChanged, FALLBACK_REFRESH_MS);
 
     return () => {
       socket.emit('show:leave', id);

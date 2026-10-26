@@ -202,7 +202,8 @@ The backend follows Model-View-Controller:
 
 ```
 server/
-├── server.js                 # Entry point: Express app, routes, Socket.io, starts the server
+├── app.js                    # Express app: middleware and routes
+├── server.js                 # Entry point: starts the HTTP server with Socket.io
 ├── seed.js                   # Resets the database with sample data
 ├── config/db.js              # MongoDB connection
 ├── controllers/              # authController, adminController, movieController, theatreController,
@@ -340,3 +341,27 @@ Send the token as `Authorization: Bearer <token>`.
    - add a theatre and a movie
    - schedule a show
    - check the dashboard and reports.
+
+## 11. Deploying to Vercel
+
+The repo is set up to deploy on Vercel as a single project:
+- [vercel.json](vercel.json) installs both packages and builds the React client into `client/dist`.
+- [api/index.js](api/index.js) runs the Express app as a serverless function for every `/api/*` request.
+- All other URLs serve the React app.
+
+Vercel's serverless functions can't hold WebSocket connections, so the Vercel build sets `VITE_REALTIME=polling`. In that mode the seat map refreshes every 4 seconds instead of using Socket.io. Seat holds, payments and double-booking protection work exactly the same. Running locally with `npm run dev` keeps instant Socket.io updates.
+
+Steps:
+1. **Database:** create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+   - Add a database user.
+   - Under **Network Access**, allow `0.0.0.0/0`.
+   - Copy the connection string and add a database name, for example `.../imovies?retryWrites=true&w=majority`.
+2. **Seed it** from your computer, in PowerShell inside `server/`:
+   ```powershell
+   $env:MONGO_URI="<your Atlas connection string>"; npm run seed
+   ```
+3. **Vercel:** go to **Add New → Project**, import this GitHub repo, and add these environment variables:
+   - `MONGO_URI`: your Atlas connection string
+   - `JWT_SECRET`: a long random string
+
+   Then click **Deploy**. Every push to `main` redeploys automatically.
