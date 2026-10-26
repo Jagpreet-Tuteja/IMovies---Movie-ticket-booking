@@ -1,0 +1,155 @@
+body {
+  background: #f5f6fa;
+}
+
+.movie-poster {
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: #ddd;
+}
+
+.movie-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.movie-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12);
+}
+
+.hero {
+  background: linear-gradient(120deg, #1a1d29, #3b0d18);
+}
+
+/* Stars */
+.stars {
+  color: #ced4da;
+  letter-spacing: 1px;
+}
+.stars .filled {
+  color: #f5a623;
+}
+.star-btn {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  color: #ced4da;
+  font-size: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+.star-btn.filled {
+  color: #f5a623;
+}
+
+/* Showtime buttons */
+.showtime-btn {
+  min-width: 96px;
+}
+
+/* Seat map */
+.screen-bar {
+  height: 6px;
+  border-radius: 50% / 100%;
+  background: linear-gradient(90deg, #adb5bd, #495057, #adb5bd);
+  margin: 0 auto 0.5rem;
+  max-width: 600px;
+}
+
+.seat-grid {
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.seat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-width: max-content;
+}
+
+.seat-row-label {
+  width: 1.5rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-align: center;
+}
+
+.seat {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px 6px 3px 3px;
+  border: 1px solid #198754;
+  background: #fff;
+  color: #198754;
+  font-size: 0.7rem;
+  padding: 0;
+  cursor: pointer;
+}
+.seat:hover:not(:disabled) {
+  background: #d1e7dd;
+}
+.seat.selected {
+  background: #198754;
+  color: #fff;
+}
+.seat.held {
+  background: #fff3cd;
+  border-color: #ffc107;
+  color: #997404;
+  cursor: not-allowed;
+}
+.seat.booked {
+  background: #dee2e6;
+  border-color: #ced4da;
+  color: #adb5bd;
+  cursor: not-allowed;
+}
+.seat.aisle-gap {
+  margin-left: 18px;
+}
+
+.legend-box {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* Payment method options */
+.pay-option {
+  cursor: pointer;
+}
+.pay-option.active {
+  border-color: #dc3545 !important;
+  background: #fff5f5;
+}
+
+/* Ticket */
+.ticket {
+  border: 2px dashed #dee2e6;
+}
+
+/* Admin */
+.admin-nav .nav-link {
+  color: #495057;
+  border-radius: 0.375rem;
+}
+.admin-nav .nav-link.active {
+  background: #dc3545;
+  color: #fff;
+}
+.stat-card .display-6 {
+  font-weight: 600;
+}
+
+@media print {
+  .navbar,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+}
