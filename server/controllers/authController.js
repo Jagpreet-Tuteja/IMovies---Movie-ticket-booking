@@ -1,9 +1,9 @@
 const User = require('../models/userModel');
-const { signToken, publicAccount } = require('../utils/token');
+const { signToken, publicAccount, isText } = require('../utils/token');
 
 exports.register = async (req, res) => {
   const { name, email, phone, password } = req.body;
-  if (!name || !email || !password) {
+  if (!isText(name) || !isText(email) || !isText(password) || (phone !== undefined && typeof phone !== 'string')) {
     return res.status(400).json({ message: 'Name, email and password are required' });
   }
   if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
+  if (!isText(email) || !isText(password)) return res.status(400).json({ message: 'Email and password are required' });
 
   const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
   if (!user || !(await user.matchPassword(password))) {
@@ -33,6 +33,9 @@ exports.me = (req, res) => res.json({ user: publicAccount(req.user, req.role) })
 
 exports.updateProfile = async (req, res) => {
   const { name, phone, city } = req.body;
+  if ([name, phone, city].some((v) => v !== undefined && typeof v !== 'string')) {
+    return res.status(400).json({ message: 'Invalid profile details' });
+  }
   if (name !== undefined) {
     if (!name.trim()) return res.status(400).json({ message: 'Name cannot be empty' });
     req.user.name = name;

@@ -5,13 +5,13 @@ const Theatre = require('../models/theatreModel');
 const Show = require('../models/showModel');
 const Booking = require('../models/bookingModel');
 const Payment = require('../models/paymentModel');
-const { signToken, publicAccount } = require('../utils/token');
+const { signToken, publicAccount, isText } = require('../utils/token');
 const { cancelBooking, withDetails, ticketText } = require('./bookingController');
 const { sendMail } = require('../utils/notify');
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
+  if (!isText(email) || !isText(password)) return res.status(400).json({ message: 'Email and password are required' });
 
   const admin = await Admin.findOne({ email: email.toLowerCase() }).select('+password');
   if (!admin || !(await admin.matchPassword(password))) {

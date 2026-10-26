@@ -11,7 +11,10 @@ const theatreIdsInCity = (city) => Theatre.find({ city }).distinct('_id');
 
 // GET /api/movies?search=&genre=&language=&minRating=&city=
 exports.list = async (req, res) => {
-  const { search, genre, language, minRating, city } = req.query;
+  // Filters are plain text; anything else (arrays, objects) is ignored
+  const { search, genre, language, minRating, city } = Object.fromEntries(
+    Object.entries(req.query).filter(([, v]) => typeof v === 'string')
+  );
   const filter = {};
   if (search) filter.title = { $regex: escapeRegex(search), $options: 'i' };
   if (genre) filter.genres = genre;
@@ -44,7 +47,7 @@ exports.get = async (req, res) => {
 // Upcoming shows for a movie with live seat counts, optionally limited to one city
 exports.shows = async (req, res) => {
   const filter = { movie: req.params.id, startTime: { $gte: new Date() } };
-  if (req.query.city) filter.theatre = { $in: await theatreIdsInCity(req.query.city) };
+  if (typeof req.query.city === 'string' && req.query.city) filter.theatre = { $in: await theatreIdsInCity(req.query.city) };
 
   const shows = await Show.find(filter).sort({ startTime: 1 }).populate('theatre', 'name city address');
   const taken = await Seat.countTaken(shows.map((s) => s._id));

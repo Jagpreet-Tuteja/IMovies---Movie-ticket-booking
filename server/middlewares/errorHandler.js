@@ -11,8 +11,10 @@ function errorHandler(err, req, res, next) {
   if (err.name === 'CastError') return res.status(400).json({ message: `Invalid ${err.path}: ${err.value}` });
   if (err.code === 11000) return res.status(409).json({ message: 'That record already exists' });
 
-  console.error(err);
-  res.status(err.status || 500).json({ message: err.status ? err.message : 'Something went wrong on the server' });
+  // Client errors from Express itself (bad JSON, body too large) carry a 4xx status
+  const status = err.status || err.statusCode || 500;
+  if (status >= 500) console.error(err);
+  res.status(status).json({ message: status < 500 ? err.message : 'Something went wrong on the server' });
 }
 
 module.exports = { notFound, errorHandler };
