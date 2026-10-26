@@ -13,7 +13,8 @@ const Review = require('./models/reviewModel');
 const Favorite = require('./models/favoriteModel');
 const { refreshMovieRating } = require('./controllers/reviewController');
 
-const ADMIN = { name: 'IMovies Admin', email: 'admin@imovies.com', password: 'admin123' };
+// Set ADMIN_PASSWORD on a public deployment so only you know the admin login
+const ADMIN = { name: 'IMovies Admin', email: 'admin@imovies.com', password: process.env.ADMIN_PASSWORD || 'admin123' };
 const DEMO_USER = { name: 'Sarah Kapoor', email: 'user@imovies.com', phone: '9876543210', city: 'Mumbai', password: 'user123' };
 
 const movies = [
@@ -88,40 +89,57 @@ const theatres = [
 
 // Four slots 3.5+ hours apart, so the longest movie plus cleaning time never overlaps the next slot
 const SLOTS = [10, 13.75, 17.5, 21.25];
-const DAYS = 3;
+const DAYS_AHEAD = 7;
 const BASE_PRICE = [180, 220, 250, 200];
 
-async function seed() {
-  await mongoose.connect(process.env.MONGO_URI);
-  await Promise.all(
-    [Admin, User, Movie, Theatre, Show, Seat, Booking, Payment, Review, Favorite].map((m) => m.deleteMany())
+// All sample theatres are in India, so showtimes are planned in IST whatever the server's timezone
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+function istDayStart(daysFromToday) {
+  const nowIst = new Date(Date.now() + IST_OFFSET_MS);
+  return new Date(
+    Date.UTC(nowIst.getUTCFullYear(), nowIst.getUTCMonth(), nowIst.getUTCDate() + daysFromToday) - IST_OFFSET_MS
   );
+}
 
-  await Admin.create(ADMIN);
-  const user = await User.create(DEMO_USER);
-  const createdMovies = await Movie.insertMany(movies);
-  const createdTheatres = await Theatre.insertMany(theatres);
+// Schedules shows for every day of the coming week that has none yet. Safe to run repeatedly,
+// which keeps a long-running demo bookable.
+async function scheduleUpcomingShows() {
+  const [allMovies, allTheatres] = await Promise.all([
+    Movie.find().sort({ createdAt: 1 }),
+    Theatre.find().sort({ createdAt: 1 }),
+  ]);
+  if (!allMovies.length || !allTheatres.length) return 0;
 
   const shows = [];
-  for (let day = 1; day <= DAYS; day++) {
-    createdTheatres.forEach((theatre, t) => {
+  for (let day = 1; day <= DAYS_AHEAD; day++) {
+    const dayStart = istDayStart(day);
+    const dayEnd = istDayStart(day + 1);
+    if (await Show.exists({ startTime: { $gte: dayStart, $lt: dayEnd } })) continue;
+
+    allTheatres.forEach((theatre, t) => {
       for (let screen = 1; screen <= theatre.screens; screen++) {
         SLOTS.forEach((hour, s) => {
-          const start = new Date();
-          start.setDate(start.getDate() + day);
-          start.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
           shows.push({
-            movie: createdMovies[(day + t + screen + s) % createdMovies.length]._id,
+            movie: allMovies[(day + t + screen + s) % allMovies.length]._id,
             theatre: theatre._id,
             screen,
-            startTime: start,
-            price: BASE_PRICE[t] + (hour >= 17 ? 50 : 0), // evening shows cost more
+            startTime: new Date(dayStart.getTime() + hour * 60 * 60 * 1000),
+            price: BASE_PRICE[t % BASE_PRICE.length] + (hour >= 17 ? 50 : 0), // evening shows cost more
           });
         });
       }
     });
   }
-  await Show.insertMany(shows);
+  if (shows.length) await Show.insertMany(shows);
+  return shows.length;
+}
+
+// Everything except the admin account
+async function createSampleData() {
+  const user = await User.create(DEMO_USER);
+  const createdMovies = await Movie.insertMany(movies);
+  await Theatre.insertMany(theatres);
+  const showCount = await scheduleUpcomingShows();
 
   await Review.insertMany([
     { user: user._id, movie: createdMovies[0]._id, rating: 5, comment: 'Mind-blowing visuals and that soundtrack!' },
@@ -129,14 +147,49 @@ async function seed() {
   ]);
   await Promise.all(createdMovies.map((m) => refreshMovieRating(m._id)));
   await Favorite.create({ user: user._id, movie: createdMovies[1]._id });
-
-  console.log(`Seeded ${createdMovies.length} movies, ${createdTheatres.length} theatres and ${shows.length} shows.`);
-  console.log(`Admin login: ${ADMIN.email} / ${ADMIN.password}`);
-  console.log(`Demo user:   ${DEMO_USER.email} / ${DEMO_USER.password}`);
-  await mongoose.disconnect();
+  return showCount;
 }
 
-seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Wipes the database and loads fresh sample data (npm run seed)
+async function resetDatabase() {
+  await Promise.all(
+    [Admin, User, Movie, Theatre, Show, Seat, Booking, Payment, Review, Favorite].map((m) => m.deleteMany())
+  );
+  await Admin.create(ADMIN);
+  return createSampleData();
+}
+
+// Loads sample data into a brand-new, empty database only. The server calls this on startup,
+// so a fresh deployment works without running the seed script by hand.
+async function seedIfEmpty() {
+  if ((await Admin.exists({})) || (await Movie.exists({}))) return false;
+  await Admin.init(); // make sure the unique email index exists
+  try {
+    // If several server instances start at once, only the first one gets past this line
+    await Admin.create(ADMIN);
+  } catch (err) {
+    if (err.code === 11000) return false;
+    throw err;
+  }
+  await createSampleData();
+  console.log('Empty database detected: loaded sample data');
+  return true;
+}
+
+module.exports = { seedIfEmpty, scheduleUpcomingShows };
+
+if (require.main === module) {
+  mongoose
+    .connect(process.env.MONGO_URI || process.env.MONGODB_URI)
+    .then(resetDatabase)
+    .then(async (showCount) => {
+      console.log(`Seeded ${movies.length} movies, ${theatres.length} theatres and ${showCount} shows.`);
+      console.log(`Admin login: ${ADMIN.email} / ${ADMIN.password}`);
+      console.log(`Demo user:   ${DEMO_USER.email} / ${DEMO_USER.password}`);
+      await mongoose.disconnect();
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
+}
