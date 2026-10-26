@@ -1,5 +1,6 @@
 // Resets the database with sample data. Run: npm run seed
 require('dotenv').config();
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Admin = require('./models/adminModel');
 const User = require('./models/userModel');
@@ -13,8 +14,15 @@ const Review = require('./models/reviewModel');
 const Favorite = require('./models/favoriteModel');
 const { refreshMovieRating } = require('./controllers/reviewController');
 
-// Set ADMIN_PASSWORD on a public deployment so only you know the admin login
-const ADMIN = { name: 'IMovies Admin', email: 'admin@imovies.com', password: process.env.ADMIN_PASSWORD || 'admin123' };
+// The admin password comes from ADMIN_PASSWORD. On a public deployment without it, a random password
+// is used so the well-known demo password never works there; set ADMIN_PASSWORD to log in.
+const ADMIN_EMAIL = 'admin@imovies.com';
+const isDeployed = Boolean(process.env.VERCEL) || process.env.NODE_ENV === 'production';
+const ADMIN = {
+  name: 'IMovies Admin',
+  email: ADMIN_EMAIL,
+  password: process.env.ADMIN_PASSWORD || (isDeployed ? crypto.randomBytes(24).toString('hex') : 'admin123'),
+};
 const DEMO_USER = { name: 'Sarah Kapoor', email: 'user@imovies.com', phone: '9876543210', city: 'Mumbai', password: 'user123' };
 
 const movies = [
@@ -176,7 +184,7 @@ async function seedIfEmpty() {
   return true;
 }
 
-module.exports = { seedIfEmpty, scheduleUpcomingShows };
+module.exports = { seedIfEmpty, scheduleUpcomingShows, ADMIN_EMAIL };
 
 if (require.main === module) {
   mongoose
