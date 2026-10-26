@@ -22,6 +22,10 @@ export const formatDay = (d) => new Date(d).toLocaleDateString(undefined, { week
 
 export const inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');
 
+// Only follow in-app paths after login, never another site (blocks "//evil.com" and "/\evil.com")
+export const safeRedirect = (path) =>
+  typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') && !path.includes('\\') ? path : '/';
+
 export const POSTER_FALLBACK = 'https://placehold.co/400x600?text=No+Poster';
 
 export default api;

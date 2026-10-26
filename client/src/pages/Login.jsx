@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { errorMessage } from '../api/client';
+import { errorMessage, safeRedirect } from '../api/client';
 
 // Customer login, or admin login when `admin` is set
 export default function Login({ admin = false }) {
@@ -18,7 +18,7 @@ export default function Login({ admin = false }) {
     setError('');
     try {
       const user = await login(form.email, form.password, admin);
-      navigate(user.role === 'admin' ? '/admin' : location.state?.from || '/', { replace: true });
+      navigate(user.role === 'admin' ? '/admin' : safeRedirect(location.state?.from), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);

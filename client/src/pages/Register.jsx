@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { errorMessage } from '../api/client';
+import { errorMessage, safeRedirect } from '../api/client';
 
 export default function Register() {
   const { register } = useAuth();
@@ -21,7 +21,7 @@ export default function Register() {
     try {
       const { confirm, ...fields } = form; // eslint-disable-line no-unused-vars
       await register(fields);
-      navigate(location.state?.from || '/', { replace: true });
+      navigate(safeRedirect(location.state?.from), { replace: true });
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
