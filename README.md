@@ -351,17 +351,18 @@ The repo is set up to deploy on Vercel as a single project:
 
 Vercel's serverless functions can't hold WebSocket connections, so the Vercel build sets `VITE_REALTIME=polling`. In that mode the seat map refreshes every 4 seconds instead of using Socket.io. Seat holds, payments and double-booking protection work exactly the same. Running locally with `npm run dev` keeps instant Socket.io updates.
 
-Steps:
-1. **Database:** create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-   - Add a database user.
-   - Under **Network Access**, allow `0.0.0.0/0`.
-   - Copy the connection string and add a database name, for example `.../imovies?retryWrites=true&w=majority`.
-2. **Seed it** from your computer, in PowerShell inside `server/`:
-   ```powershell
-   $env:MONGO_URI="<your Atlas connection string>"; npm run seed
-   ```
-3. **Vercel:** go to **Add New → Project**, import this GitHub repo, and add these environment variables:
-   - `MONGO_URI`: your Atlas connection string
-   - `JWT_SECRET`: a long random string
+When the server starts with an empty database, it loads the sample movies, theatres and accounts by itself. It also keeps the coming week's shows scheduled, so a live demo never runs out of showtimes. You don't need to run the seed script against the live database.
 
-   Then click **Deploy**. Every push to `main` redeploys automatically.
+Steps:
+1. **Import the project:** on Vercel, go to **Add New → Project** and import this GitHub repo.
+   - Set **Application Preset** to **Other**.
+   - Add these environment variables:
+     - `JWT_SECRET`: a long random string
+     - `ADMIN_PASSWORD` (optional): the admin password for the live site. Without it, the password is the public demo `admin123`.
+   - Click **Deploy**.
+2. **Add a database:** in the project, open **Storage → Create Database → MongoDB Atlas** and connect it to the project.
+   - Vercel creates a free cluster and sets `MONGODB_URI` for you. Nobody ever sees or types the password.
+   - Alternatively, set `MONGO_URI` to the connection string of your own Atlas cluster.
+3. **Redeploy:** go to **Deployments → ⋯ → Redeploy**. The first request fills the database.
+
+Every push to `main` redeploys automatically.
